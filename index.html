@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto pildistamise checklist</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #fff; --text: #1b1f24; --muted: #66707c;
+    --accent: #1f6feb; --done: #2da44e; --line: #e2e5e9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111418; --card: #1a1e24; --text: #e8eaed; --muted: #98a2ae;
+      --accent: #5b9dff; --done: #3fb862; --line: #2b313a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+  header {
+    position: sticky; top: 0; z-index: 5; background: var(--bg);
+    padding: 14px 16px 10px; border-bottom: 1px solid var(--line);
+  }
+  h1 { font-size: 1.2rem; margin: 0 0 8px; }
+  .bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .bar > div { height: 100%; width: 0; background: var(--done); transition: width .2s; }
+  .count { font-size: .85rem; color: var(--muted); margin-top: 6px; display: flex; justify-content: space-between; }
+  button.reset {
+    background: none; border: 0; color: var(--accent); font: inherit;
+    font-size: .85rem; cursor: pointer; padding: 0;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 8px 16px 48px; }
+  section { margin-top: 20px; }
+  h2 { font-size: 1rem; margin: 0 0 4px; }
+  .hint { color: var(--muted); font-size: .88rem; margin: 0 0 10px; }
+  ul { list-style: none; margin: 0; padding: 0; background: var(--card);
+       border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  li + li { border-top: 1px solid var(--line); }
+  label { display: flex; gap: 12px; padding: 12px 14px; cursor: pointer; align-items: flex-start; }
+  input[type=checkbox] { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--done); flex: none; }
+  .t { flex: 1; }
+  .t small { display: block; color: var(--muted); font-size: .85rem; }
+  input:checked + .t { color: var(--muted); text-decoration: line-through; }
+  input:checked + .t small { text-decoration: none; }
+  .n { color: var(--accent); font-weight: 600; margin-right: 4px; }
+  .tips li { padding: 10px 14px; font-size: .92rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🚗 Auto pildistamise checklist</h1>
+  <div class="bar"><div id="fill"></div></div>
+  <div class="count"><span id="count">0 / 0</span><button class="reset" id="reset">Nulli kõik</button></div>
+</header>
+<main id="app"></main>
+
+<script>
+const sections = [
+  {
+    title: "1. Ettevalmistus",
+    hint: "Kümme minutit siin säästab hiljem tunde küsimuste vastamist.",
+    items: [
+      ["Auto on pestud ja salong koristatud", "Mustus näeb pildil välja nagu kahjustus."],
+      ["Päevavalgus, mitte otsene päike", "Pilvine ilm on parim. Vältida vastuvalgust ja tugevaid varje."],
+      ["Taust on rahulik", "Parkla või tühi tänav, ei muid autosid ega inimesi taustal."],
+      ["Telefon horisontaalselt, kaamera objektiiv puhas", "Pühi objektiiv rätikuga."],
+      ["Dokumendid kaasas", "Registreerimistunnistus ja hooldusraamat."]
+    ]
+  },
+  {
+    title: "2. Kaamera üldseaded (üks kord)",
+    hint: "Sony A7 II + Tamron 28–75 mm f/2.8. Täpsemad seaded olukorra kaupa on all lehe lõpus.",
+    items: [
+      ["Režiim A (ava eelistus)", "Ava paned ise, kiiruse valib kaamera. Vajadusel lülita M-i."],
+      ["Failivorming RAW + JPEG (või JPEG Fine)", "RAW lubab hiljem valget tasakaalu ja valgust parandada."],
+      ["Valge tasakaal: Päevavalgus või Pilvine", "Mitte Auto. Kõik pildid jäävad samade värvidega."],
+      ["Fookus: AF-S (single) + Flexible Spot (S või M)", "Fookuspunkt ise paika, mitte Wide."],
+      ["Mõõtmine: Multi, DRO ja HDR väljas", "Et pildid oleksid ühtlased ja ilma kunstlikuks töötlemata."],
+      ["Välk väljas, SteadyShot sees", "A7 II-l on kerega sisseehitatud stabilisaator."],
+      ["Ruudustik (Grid line) sees", "Horisont sirgeks, auto ei kuku kõrvale."],
+      ["Auto ISO piiridega 100–1600", "Salongis ja varjus jääb pilt nii veel puhtaks. Minimaalne kiirus 1/125."]
+    ]
+  },
+  {
+    title: "3. Välisvaated – järjekord ümber auto",
+    hint: "Kõnni auto ümber päripäeva. Seisa 3–4 m kaugusel, kaamera puusakõrgusel, kogu auto kaadris.",
+    numbered: true,
+    items: [
+      ["Eest – otse keskelt", "Numbrimärk ja mõlemad esituled nähtaval."],
+      ["Vasak ees 45° nurk", "Näha esiots ja vasak külg."],
+      ["Vasak külg – täispikkuses", "Seisa täpselt keskosa kohal, risti autoga."],
+      ["Vasak taga 45° nurk", "Näha tagaots ja vasak külg."],
+      ["Tagant – otse keskelt", "Numbrimärk ja mõlemad tagatuled nähtaval."],
+      ["Parem taga 45° nurk", "Näha tagaots ja parem külg."],
+      ["Parem külg – täispikkuses", "Sama kaugus kui vasakult küljelt."],
+      ["Parem ees 45° nurk", "Näha esiots ja parem külg."]
+    ]
+  },
+  {
+    title: "4. Detailid väljastpoolt",
+    hint: "Tee lähivõtted, kuid jäta neljast nurgast pildid siiski kaadrisse.",
+    items: [
+      ["Vasak eesratas + velg", "Näita rehvi külge ja velje seisukorda."],
+      ["Parem eesratas + velg", ""],
+      ["Vasak tagaratas + velg", ""],
+      ["Parem tagaratas + velg", ""],
+      ["Rehvi muster (vähemalt üks ratas)", "Aitab hinnata rehvikulumit."],
+      ["Esiklaas (ülevaade + võimalikud praod)", ""],
+      ["Katus ülalt või kõrgemalt nurgast", "Astu kasti või tõsta telefon pea kohale."],
+      ["Esituled ja tagatuled lähedalt", ""],
+      ["Kõik kriimud, mõlgid, roostekohad", "Esmalt kaugemalt, siis lähedalt. Pane võimalusel sõrm või münt mõõdu jaoks kõrvale."]
+    ]
+  },
+  {
+    title: "5. Salong",
+    hint: "Ava uksed, et valgust sisse saada. Välgu kasutamist väldi.",
+    items: [
+      ["Salongi üldvaade juhiukse kaudu", "Armatuurlaud ja rool."],
+      ["Armatuurlaud süüte sees", "Näha käigumõõdik (odomeeter) ja võimalikud veatuled."],
+      ["Käigumõõdiku lähivõte", "Selgelt loetavad kilomeetrid."],
+      ["Keskkonsool ja infoekraan", ""],
+      ["Käigukang ja käsipidur", ""],
+      ["Esiistmed", "Kulumine, plekid, rebendid."],
+      ["Tagaiste", "Ava uks tagumisel poolel."],
+      ["Uksepolstrid ja katuse sisekate", ""],
+      ["Võtmed ja pult", "Kõik komplektis olevad."]
+    ]
+  },
+  {
+    title: "6. Pagasnik ja mootoriruum",
+    hint: "",
+    items: [
+      ["Pagasnik avatud, tühi", ""],
+      ["Varuratas või rehviparandus komplekt", "Samuti tungraud ja mutrivõti."],
+      ["Mootoriruum ülevaade", "Ava kapott, pildista ülalt."],
+      ["Mootoriruum – võimalikud lekked, rooste, õlijäljed", ""],
+      ["VIN-kood (esiklaasi all või uksepiidal)", "Selge, loetav lähivõte."],
+      ["Tehasesilt (ukse piidal või mootoriruumis)", ""]
+    ]
+  }
+];
+
+const KEY = "autoChecklist.v1";
+let state = {};
+try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+
+const app = document.getElementById("app");
+sections.forEach((s, si) => {
+  const el = document.createElement("section");
+  const h = document.createElement("h2"); h.textContent = s.title;
+  el.appendChild(h);
+  if (s.hint) { const p = document.createElement("p"); p.className = "hint"; p.textContent = s.hint; el.appendChild(p); }
+  const ul = document.createElement("ul");
+  s.items.forEach(([title, note], i) => {
+    const id = si + "-" + i;
+    const li = document.createElement("li");
+    const label = document.createElement("label");
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = !!state[id];
+    cb.addEventListener("change", () => { state[id] = cb.checked; save(); update(); });
+    const t = document.createElement("span"); t.className = "t";
+    if (s.numbered) { const n = document.createElement("span"); n.className = "n"; n.textContent = (i + 1) + "."; t.appendChild(n); }
+    t.appendChild(document.createTextNode(title));
+    if (note) { const sm = document.createElement("small"); sm.textContent = note; t.appendChild(sm); }
+    label.append(cb, t); li.appendChild(label); ul.appendChild(li);
+  });
+  el.appendChild(ul);
+  app.appendChild(el);
+});
+
+const presets = document.createElement("section");
+presets.innerHTML = `<h2>Seaded olukorra kaupa</h2>
+  <p class="hint">Kui kogu auto peab olema terav, ära kasuta f/2.8. Tamron on kõige teravam ligikaudu f/5.6–8. Kõrgemal kui f/11 hakkab pilt difraktsiooni tõttu pehmenema.</p>
+  <ul class="tips">
+  <li><b>Välisvaated (8 kaadrit)</b><br>Ava <b>f/8</b>, ISO 100–400, kiirus vähemalt 1/125. Zoom <b>40–50 mm</b> ja astu kaugemale (3–4 m), nii on perspektiiv loomulik ja autokuju ei veni. Fookus ühele punktile auto esimese kolmandiku kohal (esiratas või esiuks). f/8 hoiab terava auto algusest lõpuni.</li>
+  <li><b>Külgvaated täispikkuses</b><br>f/8, ~35–50 mm. Seisa täpselt auto keskosa kohal, risti. Fookus keskmisele uksele, siis on esi- ja tagaots mõlemad teravad.</li>
+  <li><b>Rattad ja velled</b><br>f/8, ISO 100–400, ~50–75 mm. Fookus velje keskosale või rehvi külgmisele kirjale.</li>
+  <li><b>Kriimud, mõlgid, rooste (lähivõte)</b><br>f/8–11, 50–75 mm, 0,5–1 m kaugusel. Fookus täpselt kahjustusele. Tee ka üks laiem pilt, kust on näha, kus auto peal see asub.</li>
+  <li><b>Salong üldvaade</b><br>f/5.6–8, <b>28 mm</b>, ISO 400–1600, kiirus ≥ 1/60. Fookus armatuurlaua kese ehk umbes 1/3 sügavusest. Ära tõsta ava avatumaks, tõsta pigem ISO-d.</li>
+  <li><b>Käigumõõdik ja armatuurlaud</b><br>f/5.6, 50–75 mm, ISO 800–1600, kiirus ≥ 1/125. Fookus numbritele. Kui kuval on peegeldus, nihuta kaamerat veidi küljele.</li>
+  <li><b>Istmed, uksepolstrid</b><br>f/5.6–8, 28–40 mm, ISO 800–1600. Ava uksed, et valgust sisse saada.</li>
+  <li><b>Pagasnik ja mootoriruum</b><br>f/8, 28–35 mm, ISO 400–1600. Fookus ruumi keskele, et nii ees kui taga oleks terav.</li>
+  <li><b>VIN-kood, tehasesilt</b><br>f/5.6–8, 75 mm, ISO 400–1600, kiirus ≥ 1/125. Tamroni lähifookuse piir on laias otsas umbes 18 cm, tele otsas pikem. Astu pigem sammu tagasi ja zoomi.</li>
+  </ul>
+  <p class="hint">Valikuline: ringpolarisatsioonifilter (CPL) vähendab klaaside ja kere peegeldusi. Filtri läbimõõt Tamron 28–75 mm f/2.8 Di III RXD (A036) jaoks on 67 mm.</p>`;
+app.appendChild(presets);
+
+const tips = document.createElement("section");
+tips.innerHTML = `<h2>Näpunäited</h2><ul class="tips">
+  <li>Ära kasuta digitaalset suumi, astu lähemale.</li>
+  <li>Kontrolli iga pilti kohe üle: terav, hästi valgustatud, auto ei ole ära lõigatud.</li>
+  <li>Kui tekib kahtlus, tee rohkem pilte. Kustutada saab hiljem.</li>
+  <li>Salvesta sama nurga pildid samas järjekorras, siis on neid lihtne võrrelda.</li></ul>`;
+app.appendChild(tips);
+
+function update() {
+  const boxes = app.querySelectorAll("input[type=checkbox]");
+  const done = [...boxes].filter(b => b.checked).length;
+  document.getElementById("count").textContent = done + " / " + boxes.length;
+  document.getElementById("fill").style.width = (boxes.length ? done / boxes.length * 100 : 0) + "%";
+}
+document.getElementById("reset").addEventListener("click", () => {
+  if (!confirm("Nulli kõik märkeruudud?")) return;
+  state = {}; save();
+  app.querySelectorAll("input[type=checkbox]").forEach(b => b.checked = false);
+  update();
+});
+update();
+</script>
+</body>
+</html>
