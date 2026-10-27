@@ -47,6 +47,29 @@
   input:checked + .t small { text-decoration: none; }
   .n { color: var(--accent); font-weight: 600; margin-right: 4px; }
   .tips li { padding: 10px 14px; font-size: .92rem; }
+  .modes { display: flex; gap: 6px; margin-top: 10px; }
+  .modes button {
+    flex: 1; padding: 8px; font: inherit; font-size: .9rem; cursor: pointer;
+    background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+  }
+  .modes button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #guide { display: flex; flex-direction: column; gap: 14px; min-height: calc(100vh - 150px); }
+  #guide[hidden] { display: none; }
+  .g-sec { color: var(--muted); font-size: .88rem; margin-top: 8px; }
+  .g-title { font-size: 1.7rem; line-height: 1.2; margin: 0; font-weight: 700; }
+  .g-note { color: var(--muted); font-size: 1rem; margin: 0; }
+  .cfg { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .cfg h3 { margin: 0 0 8px; font-size: .8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .cfg dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; }
+  .cfg dt { color: var(--muted); font-size: .9rem; }
+  .cfg dd { margin: 0; font-weight: 600; font-size: 1.05rem; }
+  .g-actions { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 10px; }
+  .g-actions .row { display: flex; gap: 8px; }
+  .g-actions button {
+    font: inherit; padding: 12px; border-radius: 10px; cursor: pointer;
+    background: var(--card); color: var(--text); border: 1px solid var(--line); flex: 1;
+  }
+  .g-actions button.big { background: var(--done); color: #fff; border-color: var(--done); font-size: 1.15rem; font-weight: 700; padding: 18px; }
 </style>
 </head>
 <body>
@@ -54,8 +77,10 @@
   <h1>🚗 Auto pildistamise checklist</h1>
   <div class="bar"><div id="fill"></div></div>
   <div class="count"><span id="count">0 / 0</span><button class="reset" id="reset">Nulli kõik</button></div>
+  <div class="modes"><button id="mList" class="on">Nimekiri</button><button id="mGuide">Samm-sammult</button></div>
 </header>
 <main id="app"></main>
+<main id="guide" hidden></main>
 
 <script>
 const sections = [
@@ -143,6 +168,35 @@ const sections = [
   }
 ];
 
+// Camera settings per step (Sony A7 II + Tamron 28-75 mm f/2.8)
+const c = (a, z, i, f, s = "≥ 1/125") => ({ a, z, i, f, s });
+const sectionCfg = {
+  2: c("f/8", "40–50 mm", "100–400", "Auto esimene kolmandik (esiratas)"),
+  3: c("f/8", "50–75 mm", "100–400", "Velje keskosa"),
+  4: c("f/5.6–8", "28 mm", "400–1600", "Armatuurlaua kese", "≥ 1/60"),
+  5: c("f/8", "28–35 mm", "400–1600", "Ruumi keskele", "≥ 1/60")
+};
+const itemCfg = {
+  "2-0": c("f/8", "40–50 mm", "100–400", "Numbrimärk"),
+  "2-2": c("f/8", "35–50 mm", "100–400", "Keskmine uks"),
+  "2-4": c("f/8", "40–50 mm", "100–400", "Numbrimärk"),
+  "2-6": c("f/8", "35–50 mm", "100–400", "Keskmine uks"),
+  "3-4": c("f/8", "50 mm", "100–400", "Rehvi muster"),
+  "3-5": c("f/8", "35–50 mm", "100–400", "Klaasi pinnale"),
+  "3-6": c("f/8", "28–35 mm", "100–400", "Katuse keskele"),
+  "3-7": c("f/8", "50–75 mm", "100–400", "Tule keskele"),
+  "3-8": c("f/8–11", "50–75 mm", "100–400", "Kahjustusele"),
+  "4-1": c("f/5.6–8", "28–35 mm", "800–1600", "Rooli taga olev armatuur"),
+  "4-2": c("f/5.6", "50–75 mm", "800–1600", "Numbritele"),
+  "4-5": c("f/5.6–8", "28–40 mm", "800–1600", "Istme keskele", "≥ 1/60"),
+  "4-6": c("f/5.6–8", "28–40 mm", "800–1600", "Istme keskele", "≥ 1/60"),
+  "4-7": c("f/5.6–8", "28–40 mm", "800–1600", "Polstri keskele", "≥ 1/60"),
+  "4-8": c("f/8", "50 mm", "400–1600", "Võtmele"),
+  "5-3": c("f/8", "50 mm", "400–1600", "Kahjustuskohale"),
+  "5-4": c("f/5.6–8", "75 mm", "400–1600", "Tähtedele"),
+  "5-5": c("f/5.6–8", "75 mm", "400–1600", "Tähtedele")
+};
+
 const KEY = "autoChecklist.v1";
 let state = {};
 try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
@@ -160,7 +214,7 @@ sections.forEach((s, si) => {
     const li = document.createElement("li");
     const label = document.createElement("label");
     const cb = document.createElement("input");
-    cb.type = "checkbox"; cb.checked = !!state[id];
+    cb.type = "checkbox"; cb.checked = !!state[id]; cb.dataset.id = id;
     cb.addEventListener("change", () => { state[id] = cb.checked; save(); update(); });
     const t = document.createElement("span"); t.className = "t";
     if (s.numbered) { const n = document.createElement("span"); n.className = "n"; n.textContent = (i + 1) + "."; t.appendChild(n); }
@@ -205,10 +259,82 @@ function update() {
 }
 document.getElementById("reset").addEventListener("click", () => {
   if (!confirm("Nulli kõik märkeruudud?")) return;
-  state = {}; save();
+  state = {}; save(); gi = 0;
   app.querySelectorAll("input[type=checkbox]").forEach(b => b.checked = false);
   update();
 });
+// Step-by-step mode
+const guide = document.getElementById("guide");
+const flat = [];
+sections.forEach((s, si) => s.items.forEach(([title, note], i) => flat.push({
+  id: si + "-" + i, section: s.title.replace(/^\d+\.\s*/, ""), title, note,
+  cfg: itemCfg[si + "-" + i] || sectionCfg[si] || null, n: i + 1, total: s.items.length
+})));
+let gi = 0, mode = "list";
+try { mode = localStorage.getItem(KEY + ".mode") || "list"; } catch (e) {}
+
+function setDone(id, v) {
+  state[id] = v; save();
+  const cb = app.querySelector('input[data-id="' + id + '"]');
+  if (cb) cb.checked = v;
+  update();
+}
+function firstOpen() {
+  const k = flat.findIndex(x => !state[x.id]);
+  return k < 0 ? flat.length : k;
+}
+function setMode(m) {
+  mode = m;
+  try { localStorage.setItem(KEY + ".mode", m); } catch (e) {}
+  app.hidden = m === "guide";
+  guide.hidden = m !== "guide";
+  document.getElementById("mList").classList.toggle("on", m === "list");
+  document.getElementById("mGuide").classList.toggle("on", m === "guide");
+  if (m === "guide") gi = firstOpen();
+  renderGuide();
+  window.scrollTo(0, 0);
+}
+function go(k) { gi = Math.max(0, Math.min(flat.length, k)); renderGuide(); window.scrollTo(0, 0); }
+
+function renderGuide() {
+  if (mode !== "guide") return;
+  guide.innerHTML = "";
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    return e;
+  };
+  if (gi >= flat.length) {
+    guide.append(el("h2", "g-title", "Kõik tehtud ✓"), el("p", "g-note", "Vaata pildid üle ja kontrolli, et midagi poleks hägune."));
+    const a = el("div", "g-actions"), back = el("button", "", "← Viimane samm");
+    back.onclick = () => go(flat.length - 1);
+    const lst = el("button", "", "Nimekirja"); lst.onclick = () => setMode("list");
+    const row = el("div", "row"); row.append(back, lst); a.appendChild(row); guide.appendChild(a);
+    return;
+  }
+  const s = flat[gi];
+  guide.append(el("div", "g-sec", s.section + " · " + s.n + " / " + s.total), el("h2", "g-title", s.title));
+  if (s.note) guide.appendChild(el("p", "g-note", s.note));
+  if (s.cfg) {
+    const box = el("div", "cfg"), dl = el("dl");
+    box.appendChild(el("h3", "", "Kaamera seaded"));
+    [["Ava", s.cfg.a], ["Zoom", s.cfg.z], ["ISO", s.cfg.i], ["Kiirus", s.cfg.s], ["Fookus", s.cfg.f]].forEach(([k, v]) => {
+      dl.append(el("dt", "", k), el("dd", "", v));
+    });
+    box.appendChild(dl); guide.appendChild(box);
+  }
+  const a = el("div", "g-actions");
+  const done = el("button", "big", state[s.id] ? "Edasi →" : "Tehtud ja edasi →");
+  done.onclick = () => { if (!state[s.id]) setDone(s.id, true); go(gi + 1); };
+  const prev = el("button", "", "← Tagasi"); prev.onclick = () => go(gi - 1); prev.disabled = gi === 0;
+  const skip = el("button", "", "Jäta vahele"); skip.onclick = () => go(gi + 1);
+  const row = el("div", "row"); row.append(prev, skip);
+  a.append(done, row); guide.appendChild(a);
+}
+document.getElementById("mList").onclick = () => setMode("list");
+document.getElementById("mGuide").onclick = () => setMode("guide");
+setMode(mode);
 update();
 </script>
 </body>
