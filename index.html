@@ -8,11 +8,13 @@
   :root {
     --bg: #f5f6f8; --card: #fff; --text: #1b1f24; --muted: #66707c;
     --accent: #1f6feb; --done: #2da44e; --line: #e2e5e9;
+    --warn: #b35900; --warn-bg: #fff4e5;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #111418; --card: #1a1e24; --text: #e8eaed; --muted: #98a2ae;
       --accent: #5b9dff; --done: #3fb862; --line: #2b313a;
+      --warn: #ffa94d; --warn-bg: #2e2416;
     }
   }
   * { box-sizing: border-box; }
@@ -63,6 +65,14 @@
   .cfg dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; }
   .cfg dt { color: var(--muted); font-size: .9rem; }
   .cfg dd { margin: 0; font-weight: 600; font-size: 1.05rem; }
+  .cfg dt.chg, .cfg dd.chg { color: var(--warn); }
+  .cfg dd.chg::after { content: " ●"; font-size: .7em; vertical-align: middle; }
+  .warn {
+    background: var(--warn-bg); border: 1px solid var(--warn); border-radius: 12px;
+    padding: 10px 14px; font-size: .95rem;
+  }
+  .warn b { color: var(--warn); }
+  .warn div { margin-top: 4px; }
   .g-actions { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 10px; }
   .g-actions .row { display: flex; gap: 8px; }
   .g-actions button {
@@ -317,10 +327,34 @@ function renderGuide() {
   guide.append(el("div", "g-sec", s.section + " · " + s.n + " / " + s.total), el("h2", "g-title", s.title));
   if (s.note) guide.appendChild(el("p", "g-note", s.note));
   if (s.cfg) {
+    // Flag a setting only when the middle of the previous range falls outside the new one.
+    // Shutter is left to Auto ISO and the focus point changes almost every step, so neither is flagged.
+    let prev = null;
+    for (let k = gi - 1; k >= 0 && !prev; k--) prev = flat[k].cfg;
+    const fields = [["Ava", "a"], ["Zoom", "z"], ["ISO", "i"], ["Kiirus", "s"], ["Fookus", "f"]];
+    const range = v => { const n = (v.match(/\d+(\.\d+)?/g) || []).map(Number); return [Math.min(...n), Math.max(...n)]; };
+    const needsChange = (from, to) => {
+      const [a, b] = range(from), [lo, hi] = range(to), mid = (a + b) / 2;
+      return mid < lo || mid > hi;
+    };
+    const changed = prev
+      ? fields.filter(([, key]) => ["a", "z", "i"].includes(key) && needsChange(prev[key], s.cfg[key]))
+      : [];
+    if (!prev) {
+      const w = el("div", "warn");
+      w.appendChild(el("b", "", "Esimene kaader: sea kaamera alloleva järgi"));
+      guide.appendChild(w);
+    } else if (changed.length) {
+      const w = el("div", "warn");
+      w.appendChild(el("b", "", "⚠ Muuda seadeid"));
+      changed.forEach(([label, key]) => w.appendChild(el("div", "", label + ": " + prev[key] + " → " + s.cfg[key])));
+      guide.appendChild(w);
+    }
     const box = el("div", "cfg"), dl = el("dl");
     box.appendChild(el("h3", "", "Kaamera seaded"));
-    [["Ava", s.cfg.a], ["Zoom", s.cfg.z], ["ISO", s.cfg.i], ["Kiirus", s.cfg.s], ["Fookus", s.cfg.f]].forEach(([k, v]) => {
-      dl.append(el("dt", "", k), el("dd", "", v));
+    fields.forEach(([label, key]) => {
+      const cls = changed.some(([, k]) => k === key) ? "chg" : "";
+      dl.append(el("dt", cls, label), el("dd", cls, s.cfg[key]));
     });
     box.appendChild(dl); guide.appendChild(box);
   }
